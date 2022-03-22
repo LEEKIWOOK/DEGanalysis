@@ -35,18 +35,19 @@ class(log_fpkm) = 'matrix'
 
 ####################################################################################
 #2.Batch effect detection
-fpkm.pca.before <- pca(t(log_fpkm), ncomp = 2)
-
-replicates = c(rep("N-RO",3),rep("M-RBO",3),rep("Y79",4),rep("RSC",5))
+replicates = c(rep("N-RO",3),rep("M-RBO",3),rep("RSC",4),rep("Y79",5))
 batch<-factor(replicates)
 names(batch) = colnames(fpkm)
 
-experiment = c(rep("inhouse",10),rep("publish_data",5))
+experiment = rep("inhouse",15)
 library<-factor(experiment)
 names(library) = colnames(fpkm)
 
-Scatter_Density(mat = fpkm.pca.before$variates$X, B = batch, T = library, E = fpkm.pca.before$explained_variance,
-                xlim = c(-200,400), ylim = c(-400,200),
+fpkm.pca.before <- pca(t(log_fpkm), ncomp = ncol(log_fpkm), scale=TRUE, multilevel = replicates, center = TRUE)
+
+
+Scatter_Density(mat = fpkm.pca.before$variates$X, B = batch, T = library, E = fpkm.pca.before$prop_expl_var$X,
+                xlim = c(-150,150), ylim = c(-150,150),
                 batch.legend.title = 'Cell type (batch)',
                 trt.legend.title = 'Experiment (trt)',
                 title = 'Before batch effect correction')
@@ -54,13 +55,22 @@ Scatter_Density(mat = fpkm.pca.before$variates$X, B = batch, T = library, E = fp
 ####################################################################################
 #3.Batch effect correction
 
-fpkm.mod <- model.matrix( ~ library) # full model
-fpkm.mod0 <- model.matrix( ~ 1, data = library) # null model
-fpkm.sva.n <- num.sv(dat = log_fpkm, mod = fpkm.mod) #variables in rows and samples in columns
+d = data.frame(batch = as.integer(batch))
+rownames(d) = colnames(fpkm)
+
+#fpkm.mod <- model.matrix( ~ d) # full model
+fpkm.mod <- model.matrix(~batch, data = d) # full model
+fpkm.mod0 <- model.matrix( ~ 1, data = d) # null model
+
+##################################################################################################################
+#Adjusting for surrogate variables using the limma package
+
+#fpkm.sva.n <- num.sv(dat = log_fpkm, mod = fpkm.mod, method = "leek") #variables in rows and samples in columns
+fpkm.sva.n <- num.sv(dat = log_fpkm, mod = fpkm.mod, method = "be")
 
 #To estimate the surrogate variables with both full and null models
 fpkm.sva <- sva(dat = log_fpkm, mod = fpkm.mod, mod0 = fpkm.mod0, n.sv = fpkm.sva.n)
-  #Number of significant surrogate variables is:  3
+#Number of significant surrogate variables is:  13
 
 #Estimated surrogate variables in both the null and full models
 fpkm.mod.bat <- cbind(fpkm.mod, fpkm.sva$sv)
@@ -69,20 +79,27 @@ fpkm.mod0.bat <- cbind(fpkm.mod0, fpkm.sva$sv)
 #Calculate parametric F-test P-values and Q-values (adjusted P-values) 
 fpkm.sva.trt_p <- f.pvalue(log_fpkm, fpkm.mod.bat, fpkm.mod0.bat)
 fpkm.sva.trt_adjp <- p.adjust(fpkm.sva.trt_p, method='fdr')
-
+##################################################################################################################
 #removeBatchEffect is a function implemented in the LIMMA package that fits a linear model 
 # + for each variable given a series of conditions as explanatory variables, 
 # + including the batch effect and treatment effect.
 fpkm.limma <- removeBatchEffect(log_fpkm, batch = batch, design = fpkm.mod)
 
+##################################################################################################################
+#Applying the ComBat function to adjust for known batches
+combat_res = ComBat(dat = log_fpkm, batch = batch, mod = fpkm.mod0, par.prior = TRUE, prior.plots = TRUE)
+
 ####################################################################################
 #4. Result of batch effect correction
+fpkm.pca.combat = pca(t(combat_res), ncomp = ncol(log_fpkm), scale=TRUE, multilevel = replicates, center = TRUE)
+fpkm.pca.limma = pca(t(fpkm.limma), ncomp = ncol(log_fpkm), scale=TRUE, multilevel = replicates, center = TRUE)
 
-fpkm.pca.limma = pca(t(fpkm.limma), ncomp = 2)
-fpkm.pca.plot.before <- Scatter_Density(mat = fpkm.pca.before$variates$X, B = batch, T = library, E = fpkm.pca.before$explained_variance, xlim = c(-200,400), ylim = c(-400,200), batch.legend.title = 'Cell type (batch)', trt.legend.title = 'Experiment (trt)', title = 'Before batch effect correction')
-fpkm.pca.plot.limma <- Scatter_Density(mat = fpkm.pca.limma$variates$X, B = batch, T = library, E = fpkm.pca.limma$explained_variance, xlim = c(-400,600), ylim = c(-200,300), batch.legend.title = 'Cell type (batch)', trt.legend.title = 'Experiment (trt)', title = 'Batch correction with rBE')
+fpkm.pca.plot.before <- Scatter_Density(mat = fpkm.pca.before$variates$X, B = batch, T = library, E = fpkm.pca.before$prop_expl_var$X, xlim = c(-150,150), ylim = c(-150,150), batch.legend.title = 'Cell type (batch)', trt.legend.title = 'Experiment (trt)', title = 'Before batch effect correction')
+fpkm.pca.plot.limma <- Scatter_Density(mat = fpkm.pca.limma$variates$X, B = batch, T = library, E = fpkm.pca.limma$prop_expl_var$X, xlim = c(-100,150), ylim = c(-100,150), batch.legend.title = 'Cell type (batch)', trt.legend.title = 'Experiment (trt)', title = 'Batch correction with rBE')
+fpkm.pca.plot.combat <- Scatter_Density(mat = fpkm.pca.combat$variates$X, B = batch, T = library, E = fpkm.pca.combat$prop_expl_var$X, xlim = c(-100,150), ylim = c(-100,100), batch.legend.title = 'Cell type (batch)', trt.legend.title = 'Experiment (trt)', title = 'Batch correction with Combat')
 
-grid.arrange(fpkm.pca.plot.before, fpkm.pca.plot.limma, ncol=2)
+
+grid.arrange(fpkm.pca.plot.before, fpkm.pca.plot.limma, fpkm.pca.plot.combat, ncol=2)
 
 ####################################################################################
 #5. boxplot

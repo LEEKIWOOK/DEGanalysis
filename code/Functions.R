@@ -17,11 +17,12 @@ Scatter_Density <- function(mat, B, T, E, xlim, ylim, batch.legend.title,
   pm.batch = as.factor(B)
   pm.trt = as.factor(T)
   pm.expl.var = E
+  #print(pm.expl.var)
   
   if(nlevels(pm.trt) >= 2){
     print("nlevels(trt) >= 2")
     pMain <- ggplot(data = pm.data, aes(x = pm.data[ ,1], y = pm.data[ ,2], colour = pm.batch, shape = pm.trt)) + 
-      geom_point(size = 4) + xlab(paste0('PC1: ', round(as.numeric(pm.expl.var[1])*100), '% pm.expl.var')) + 
+      geom_point(size = 8) + xlab(paste0('PC1: ', round(as.numeric(pm.expl.var[1])*100), '% pm.expl.var')) + 
       ylab(paste0('PC2: ', round(as.numeric(pm.expl.var[2])*100), '% pm.expl.var')) + 
       scale_color_manual(values = color.mixo(1:10)) + 
       theme_bw() + xlim(xlim[1], xlim[2]) + 
