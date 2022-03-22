@@ -1,8 +1,3 @@
-# title: Functions
-# Author: Yiwen Wang
-# Date: Jun. 16th
-
-
 # ---------------------------------------
 #  TSS (Total Sum Scaling) Normalisation
 # ---------------------------------------
@@ -14,44 +9,51 @@ TSS.divide = function(x){
 #---------------------------------------------------------------------
 # Principal component analysis (PCA) with density plots per component
 #---------------------------------------------------------------------
-Scatter_Density <- function(data = data, batch = batch, trt = NULL, expl.var = expl.var,
-                            xlim = xlim, ylim = ylim, batch.legend.title = 'Batch', 
-                            trt.legend.title = 'Treatment', density.lwd = 0.2,
+Scatter_Density <- function(mat, B, T, E, xlim, ylim, batch.legend.title, 
+                            trt.legend.title, density.lwd = 0.2,
                             title = NULL, title.cex = 1.5, legend.cex = 0.7, legend.title.cex =0.75){
-  data = as.data.frame(data)
-  batch = as.factor(batch)
-  trt = as.factor(trt)
-  if(nlevels(trt) >= 2){
-    pMain <- ggplot(data = data, aes(x = data[ ,1], y = data[ ,2], colour = batch, shape = trt)) + 
-      geom_point() + xlab(paste0('PC1: ', round(as.numeric(expl.var[1])*100), '% expl.var')) + 
-      ylab(paste0('PC2: ', round(as.numeric(expl.var[2])*100), '% expl.var')) + 
-      scale_color_manual(values = color.mixo(1:10)) + theme_bw() + xlim(xlim[1], xlim[2]) + 
+
+  pm.data = as.data.frame(mat)
+  pm.batch = as.factor(B)
+  pm.trt = as.factor(T)
+  pm.expl.var = E
+  
+  if(nlevels(pm.trt) >= 2){
+    print("nlevels(trt) >= 2")
+    pMain <- ggplot(data = pm.data, aes(x = pm.data[ ,1], y = pm.data[ ,2], colour = pm.batch, shape = pm.trt)) + 
+      geom_point(size = 4) + xlab(paste0('PC1: ', round(as.numeric(pm.expl.var[1])*100), '% pm.expl.var')) + 
+      ylab(paste0('PC2: ', round(as.numeric(pm.expl.var[2])*100), '% pm.expl.var')) + 
+      scale_color_manual(values = color.mixo(1:10)) + 
+      theme_bw() + xlim(xlim[1], xlim[2]) + 
       ylim(ylim[1], ylim[2]) + labs(colour = batch.legend.title, shape = trt.legend.title)
     
-    pTop <- ggplot(data,aes(x = data[ ,1], fill = batch, linetype = trt)) + 
+    pTop <- ggplot(pm.data,aes(x = pm.data[ ,1], fill = pm.batch, linetype = pm.trt)) + 
       geom_density(size = density.lwd, alpha = 0.5) + ylab('Density') + 
       theme(axis.title.x = element_blank(), axis.title.y = element_text(size = rel(0.8)), 
-            plot.title = element_text(hjust = 0.5, size = rel(title.cex)), 
-            axis.line = element_blank(), axis.text = element_blank(), axis.ticks = element_blank(),
-            panel.background = element_blank()) + scale_fill_manual(values = color.mixo(1:10)) +
+      plot.title = element_text(hjust = 0.5, size = rel(title.cex)), 
+      axis.line = element_blank(), axis.text = element_blank(), axis.ticks = element_blank(),
+      panel.background = element_blank()) +
+      scale_fill_manual(values = color.mixo(1:10)) +
       xlim(xlim[1], xlim[2]) + labs(title = title)
     
-    pRight <- ggplot(data, aes(x=data[ ,2], fill = batch, linetype = trt)) + 
+    pRight <- ggplot(pm.data, aes(x=pm.data[ ,2], fill = pm.batch, linetype = pm.trt)) + 
       geom_density(size = density.lwd,alpha = 0.5) +  coord_flip() + ylab('Density') +
       theme(axis.title.x = element_text(size = rel(0.8)), 
-            axis.title.y = element_blank(), axis.line = element_blank(),
-            axis.text = element_blank(), axis.ticks = element_blank(),
-            panel.background = element_blank()) + scale_fill_manual(values = color.mixo(1:10)) +
+      axis.title.y = element_blank(), axis.line = element_blank(),
+      axis.text = element_blank(), axis.ticks = element_blank(),
+      panel.background = element_blank()) + 
+      scale_fill_manual(values = color.mixo(1:10)) +
       xlim(ylim[1], ylim[2])
     
   }else{
-    pMain <- ggplot(data = data, aes(x = data[ ,1], y=data[ ,2], colour = batch)) + 
-      geom_point(shape = 16) + xlab(paste0('PC1: ', round(as.numeric(expl.var[1])*100), '% expl.var')) + 
-      ylab(paste0('PC2: ', round(as.numeric(expl.var[2])*100), '% expl.var')) + 
+    print("nlevels(trt) < 2")
+    pMain <- ggplot(data = pm.data, aes(x = pm.data[ ,1], y=pm.data[ ,2], colour = pm.batch)) + 
+      geom_point(shape = 16) + xlab(paste0('PC1: ', round(as.numeric(pm.expl.var[1])*100), '% expl.var')) + 
+      ylab(paste0('PC2: ', round(as.numeric(pm.expl.var[2])*100), '% expl.var')) + 
       scale_color_manual(values = color.mixo(1:10)) + theme_bw() + xlim(xlim[1], xlim[2]) + 
       ylim(ylim[1], ylim[2]) + labs(colour = batch.legend.title)
     
-    pTop <- ggplot(data, aes(x = data[ ,1], fill = batch)) + 
+    pTop <- ggplot(pm.data, aes(x = pm.data[ ,1], fill = pm.batch)) + 
       geom_density(size = density.lwd, alpha=0.5) + ylab('Density') + 
       theme(axis.title.x = element_blank(), axis.title.y = element_text(size = rel(0.8)), 
             plot.title = element_text(hjust = 0.5, size = rel(title.cex)), 
@@ -59,7 +61,7 @@ Scatter_Density <- function(data = data, batch = batch, trt = NULL, expl.var = e
             panel.background = element_blank()) + scale_fill_manual(values = color.mixo(1:10)) +
       xlim(xlim[1], xlim[2]) + labs(title = title)
     
-    pRight <- ggplot(data, aes(x=data[ ,2], fill = batch)) + 
+    pRight <- ggplot(pm.data, aes(x=pm.data[ ,2], fill = pm.batch)) + 
       geom_density(size = density.lwd, alpha = 0.5) +  coord_flip() + ylab('Density') +
       theme(axis.title.x = element_text(size = rel(0.8)), 
             axis.title.y = element_blank(), axis.line = element_blank(),
@@ -67,10 +69,9 @@ Scatter_Density <- function(data = data, batch = batch, trt = NULL, expl.var = e
             panel.background = element_blank()) + scale_fill_manual(values = color.mixo(1:10)) +
       xlim(ylim[1], ylim[2])
   }
-  
-  
-  g <- ggplotGrob(pMain + theme(legend.position = 'right', legend.box = 'horizontal',
-                                legend.direction = 'vertical', 
+
+  g <- ggplotGrob(x = pMain + theme(legend.position = 'right', legend.box = 'horizontal',
+                                legend.direction = 'vertical',
                                 legend.key.height = unit(0.2, 'cm'),
                                 legend.key.width = unit(0.1, 'cm'),
                                 legend.title = element_text(size = rel(legend.title.cex)),
@@ -78,11 +79,11 @@ Scatter_Density <- function(data = data, batch = batch, trt = NULL, expl.var = e
                                 legend.spacing.y = unit(0.1, 'cm'),
                                 legend.text = element_text(size = rel(legend.cex))))$grobs
   legend <- g[[which(sapply(g, function(x) x$name) == "guide-box")]]
-  
-  grid.arrange(pTop + theme(legend.position = 'none'), legend, pMain + 
-                 theme(legend.position = 'none'), pRight + theme(legend.position = 'none'), 
+
+  grid.arrange(pTop + theme(legend.position = 'none'), legend, pMain +
+                 theme(legend.position = 'none'), pRight + theme(legend.position = 'none'),
                ncol = 2, nrow = 2, widths = c(3, 1), heights = c(1, 3))
-  
+
 }
 
 #----------

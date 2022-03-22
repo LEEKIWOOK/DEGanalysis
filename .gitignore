@@ -1,3 +1,5 @@
 doc
 data/temp
 figure
+.Rhistory
+.gitignore
